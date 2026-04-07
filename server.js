@@ -1,4 +1,3 @@
-// backend/server.js
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -20,8 +19,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK' });
 });
 
-const port = process.env.PORT || 5000;
-
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Servidor rodando na porta ${port}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
