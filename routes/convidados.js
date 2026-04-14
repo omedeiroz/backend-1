@@ -7,32 +7,44 @@ const pool = require('../config/database');
 router.post('/api/convidados', async (req, res) => {
   try {
     const { nome, confirmado, acompanhantes } = req.body;
-    
-    // Validação básica
-    if (!nome || !confirmado) {
-      return res.status(400).json({ 
-        error: 'Nome e confirmação são obrigatórios' 
+
+    // Validação básica (corrigida para boolean)
+    if (!nome || typeof confirmado !== 'boolean') {
+      return res.status(400).json({
+        error: 'Nome e confirmação são obrigatórios',
       });
     }
 
-    const acompanhantesString = acompanhantes ? acompanhantes.join(', ') : '';
+    // Normaliza acompanhantes: pode vir array, string, null, undefined...
+    const acompanhantesArray = Array.isArray(acompanhantes)
+      ? acompanhantes
+      : (acompanhantes ? [acompanhantes] : []);
+
+    // Limpa itens: garante string e remove vazios
+    const acompanhantesLimpos = acompanhantesArray
+      .map((a) => String(a).trim())
+      .filter(Boolean);
+
+    // Salva como string (como sua tabela parece esperar)
+    const acompanhantesString = acompanhantesLimpos.join(', ');
+
     const ipAddress = req.ip;
     const userAgent = req.get('user-agent');
 
     const result = await pool.query(
       'INSERT INTO convidados (nome, confirmado, acompanhantes, ip_address, user_agent) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [nome, confirmado, acompanhantesString, ipAddress, userAgent]
+      [String(nome).trim(), confirmado, acompanhantesString, ipAddress, userAgent]
     );
 
-    res.status(201).json({ 
+    res.status(201).json({
       success: true,
       message: 'Presença confirmada com sucesso!',
-      data: result.rows[0]
+      data: result.rows[0],
     });
   } catch (error) {
     console.error('Erro ao salvar convidado:', error);
-    res.status(500).json({ 
-      error: 'Erro ao confirmar presença. Tente novamente.' 
+    res.status(500).json({
+      error: 'Erro ao confirmar presença. Tente novamente.',
     });
   }
 });
@@ -40,9 +52,7 @@ router.post('/api/convidados', async (req, res) => {
 // GET - Listar todos os convidados (opcional, para admin)
 router.get('/api/convidados', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM convidados ORDER BY data_confirmacao DESC'
-    );
+    const result = await pool.query('SELECT * FROM convidados ORDER BY data_confirmacao DESC');
     res.json({ data: result.rows });
   } catch (error) {
     console.error('Erro ao listar convidados:', error);
@@ -53,9 +63,7 @@ router.get('/api/convidados', async (req, res) => {
 // GET - Estatísticas
 router.get('/api/convidados/stats', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM estatisticas_festa'
-    );
+    const result = await pool.query('SELECT * FROM estatisticas_festa');
     res.json({ data: result.rows });
   } catch (error) {
     console.error('Erro ao buscar estatísticas:', error);
